@@ -4,21 +4,24 @@ This repository contains open source models of oilfield drilling processes. The 
 
 ### Repository Contact Information
 John Hedengren
+
 Brigham Young University
+
 [Process Research and Intelligent Systems Modeling (PRISM)](https://apm.byu.edu/prism)
+
 john.hedengren@byu.edu
 
 ### MPD Hydraulics
 
 Managed Pressure Drilling Hydraulic model that predicts pressure and mud flow at the bit and choke with changes in density, mud pump flow, and choke valve position.
 
-![MPD Hydraulics](mpd_hyraulics/mpd_hydraulics.png)
+![MPD Hydraulics](mpd_hydraulics/mpd_hydraulics.png)
 
 ### Soft String
 
-Rotational vibration dynamics are predicted with a soft string model that is broken into individual string segments that include rotational inertia, frictional, and spring effects. The combination of the individual segments may be used to predict rotational vibration. Stick slip is simulated with bit boundary conditions that simulate periods of stuck bit followed by a rapid release of the stored potential energy.
+Rotational vibration dynamics are predicted with a soft string model that is broken into individual string segments that include rotational inertia, frictional, and spring effects. The combination of the individual segments may be used to predict rotational vibration. Stick slip is simulated with bit boundary conditions that simulate periods of stuck bit followed by a rapid release of the stored potential energy. A soft string model does not include the effects of borehole interaction with the drill string.
 
-
+![Soft String](soft_string/soft_string.png)
 
 ### Repository Overview
 
