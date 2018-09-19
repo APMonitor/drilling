@@ -11,13 +11,13 @@ Brigham Young University
 
 john.hedengren@byu.edu
 
-### MPD Hydraulics [1]
+### MPD Hydraulics
 
 Managed Pressure Drilling Hydraulic model that predicts pressure and mud flow at the bit and choke with changes in density, mud pump flow, and choke valve position.
 
 ![MPD Hydraulics](mpd_hydraulics/mpd_hydraulics.png)
 
-### Soft String [2]
+### Soft String
 
 Rotational vibration dynamics are predicted with a soft string model that is broken into individual string segments that include rotational inertia, frictional, and spring effects. The combination of the individual segments may be used to predict rotational vibration. Stick slip is simulated with bit boundary conditions that simulate periods of stuck bit followed by a rapid release of the stored potential energy. A soft string model does not include the effects of borehole interaction with the drill string.
 
@@ -27,10 +27,10 @@ Rotational vibration dynamics are predicted with a soft string model that is bro
 
 This repository is in support of the open source model, data, and case study initiative as detailed in the publication, *Creating Open Source Models, Test Cases, and Data for Oilfield Drilling Challenges*, SPE-194082-MS.
 
-### Publication [3]
+### Open Source Drilling Initiative Overview
+
 Pastusek, P., Payette, G., Shor, R., Cayeux, E., Aarsnes, U.J., Hedengren, J.D., Menand, S., Macpherson, J., Gandikota, R., Behounek, M., Harmer, R., Detournay, E., Illerhaus, R., Liu, Y., Creating Open Source Models, Test Cases, and Data for Oilfield Drilling Challenges, SPE ATCE, March 2019, SPE-194082-MS.
 
-### Abstract
 The industry has significantly improved drilling performance based on knowledge from multiple models of components and systems.  However, most new models and source code have been recreated from scratch, which adds significant research overhead with little benefit.  
 The authors propose that it is time to form a coalition of industry and academic leaders to support an open source effort for drilling, to encourage the reuse of ever improving models and code.  
 The vision for this guiding coalition is to 1) set up a repository for source code, data, benchmarks, and documentation, 2) submit good code, 3) review the models and data submitted, 4) use and improve the code, 5) propose and collect anonymized validation data, 6) attract talent and support to the effort, and 7) mentor those getting started.   We ask those interested to add their time and talent to the cause, and to publish their results through peer-reviewed literature. A number of online meetings are planned to create this coalition, establish a charter, and layout the guiding principles.
