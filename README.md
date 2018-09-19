@@ -11,13 +11,13 @@ Brigham Young University
 
 john.hedengren@byu.edu
 
-### MPD Hydraulics
+### MPD Hydraulics [1]
 
 Managed Pressure Drilling Hydraulic model that predicts pressure and mud flow at the bit and choke with changes in density, mud pump flow, and choke valve position.
 
 ![MPD Hydraulics](mpd_hydraulics/mpd_hydraulics.png)
 
-### Soft String
+### Soft String [2]
 
 Rotational vibration dynamics are predicted with a soft string model that is broken into individual string segments that include rotational inertia, frictional, and spring effects. The combination of the individual segments may be used to predict rotational vibration. Stick slip is simulated with bit boundary conditions that simulate periods of stuck bit followed by a rapid release of the stored potential energy. A soft string model does not include the effects of borehole interaction with the drill string.
 
@@ -27,7 +27,7 @@ Rotational vibration dynamics are predicted with a soft string model that is bro
 
 This repository is in support of the open source model, data, and case study initiative as detailed in the publication, *Creating Open Source Models, Test Cases, and Data for Oilfield Drilling Challenges*, SPE-194082-MS.
 
-### Publication
+### Publication [3]
 Pastusek, P., Payette, G., Shor, R., Cayeux, E., Aarsnes, U.J., Hedengren, J.D., Menand, S., Macpherson, J., Gandikota, R., Behounek, M., Harmer, R., Detournay, E., Illerhaus, R., Liu, Y., Creating Open Source Models, Test Cases, and Data for Oilfield Drilling Challenges, SPE ATCE, March 2019, SPE-194082-MS.
 
 ### Abstract
@@ -41,3 +41,8 @@ In May 2018 at “The 4th International Colloquium on Non-linear dynamics and co
 Modeling the drilling process is done to help drill a round, ledge free hole, without patterns, with minimum vibration, minimum unplanned dog legs, that reaches all geological targets, in one run per section, in the least time possible. 
 An open source repository for drilling will speed up the rate of learning and automation efforts to achieve this goal throughout the entire well execution workflow, including planning, BHA design, real-time operations, and post well analysis.
 
+### References
+
+1. Asgharzadeh Shishavan, R., Hubbell, C., Perez, H.D., Hedengren, J.D., Pixton, D.S., and Pink, A.P., Multivariate Control for Managed Pressure Drilling Systems Using High Speed Telemetry, SPE Journal, SPE-170962, Published Online 7 Oct 2015, DOI: 10.2118/170962-PA. [Article](https://www.onepetro.org/journal-paper/SPE-170962-PA)
+2. Asgharzadeh Shishavan, R., Nonlinear Estimation and Control with Application to Upstream Processes, Dissertation, Brigham Young University, 2015. [Dissertation](https://apm.byu.edu/prism/uploads/Projects/Dissertation_Reza_Upstream_Automation.pdf)
+3. Sugiura, J., Samuel, R., Oppelt, J., Ostermeyer, G.P., Hedengren, J.D., and Pastusek, P., Drilling Modeling and Simulation: Current State and Future Goals, SPE IADC Drilling Conference and Exhibition, SPE-173045, 17-19 March 2015, UK, London. [Article](https://www.onepetro.org/conference-paper/SPE-173045-MS)
