@@ -53,4 +53,5 @@ for i in range(n):
     plt.plot(m.time,d[i])
 plt.ylabel(r'Accel ($rad/s^2$)')
 plt.legend(['Top Drive','Section 1','Section 2', 'etc'],loc='best')
+plt.xlabel('Time (sec)')
 plt.show()
