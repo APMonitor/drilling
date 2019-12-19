@@ -1,0 +1,262 @@
+! Combined model
+! ROP, RPM, WOB, Pressure models
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Rate of penetration model (Bourgoyne and Young model) for roller-cone bit types
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Parameters
+   !bar  ! change???
+
+  a_1=3.91
+  a_2=9.45e-5
+  a_3=6.86e-5
+  a_4=4e-5
+  a_5=0.9 !0.853
+  a_6=0.48
+  a_7=0.025
+  a_8=0.67
+
+  W_t=1.0 !the threshold bit weight, the reported values for this term are ranging from 0.6 to 2.0   1,000 lbf/in
+  F_j=1450 !hydraulic impact force beneath the bit, lbf
+  f_t_d=0.3 ! fractional tooth dullness
+  d_b=10 !tooth bit in
+  g=9.81
+  
+  rho_a1=14  !lbm/gal pore pressure gradiant
+  ! (P_bit-p_c)*14.50377/(0.052*h_rop*3.281)+ro_a_1*0.01002413       equivalent circulating density
+  h_rop=1000 !meter -- drilling length
+  d=1
+  ! wob lbf
+! rpm rounds per minute
+End Parameters
+
+Variables
+  rop ! > 0  ft/hr
+End Variables
+
+Intermediates
+  f_1=exp(a_1)
+  f_2=exp(a_2*(10000-h_rop*3.281))
+  !f_3=exp(a_3*(h_rop*3.281)^0.69*((P_bit/(g*h_rop)-rho_a1)*119.826))
+  f_3=exp(a_3*(h_rop*3.281)^0.69*(rho_a1-((P_bit-p_c)*14.50377/(0.052*h_rop*3.281)+ro_a_1*0.01002413)))       
+  !f_4=exp(a_4*(h_rop*3.281)*((P_bit/(g*h_rop)-rho_a1)*119.826))
+  f_4=exp(a_4*(h_rop*3.281)*(rho_a1-((P_bit-p_c)*14.50377/(0.052*h_rop*3.281)+ro_a_1*0.01002413)))
+  f_5=(((wob/1000)/d_b-W_t)/(4-W_t))^a_5  ! f_5 is NaN if WOB <= 10,000
+  !f_6=(rpm/100)^a_6
+  f_6=(drpm/60)^a_6
+  f_7=exp(-a_7*f_t_d)
+  f_8=exp(F_j/1000)^a_8
+End Intermediates
+
+Equations
+  rop = f_1*f_2*f_3*f_4*f_5*f_6*f_7*f_8
+End Equations
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Drill string rotation model
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Constants
+  n_seg = 4 !43  ! number of pipe segments
+End Constants
+
+Parameters
+  rpm = 100 ! top-drive rpm 
+  ks=35950
+  kb=204020
+  js=3.2021
+  jb=15.8480
+  ds=0.0271
+  db=0.0266
+End Parameters
+
+Variables
+  v[1:n_seg] = 0
+  drpm = rpm ! downhole rpm at the BHA rounds per minute
+  d[1:n_seg] = 0
+End Variables
+
+Equations
+  js * $v[1]         = ds*ks*(rpm-v[1])          + ks*d[1]     - ds*ks*(v[1]-v[2])       - ks*d[2]
+  js * $v[2]         = ds*ks*(v[1]-v[2])         + ks*d[2]     - ds*ks*(v[2]-v[3])       - ks*d[3]
+  js * $v[3:n_seg-1] = ds*ks*(v[2:n_seg-2]-v[3:n_seg-1]) + ks*d[3:n_seg-1] - ds*ks*(v[3:n_seg-1]-v[4:n_seg]) - ks*d[4:n_seg]
+  jb * $v[n_seg]     = (db*kb*(v[n_seg-1]-v[n_seg])+kb*d[n_seg]) - 1764*(v[n_seg]/sqrt(v[n_seg]^2+0.2^2) + (1.5*0.2*v[n_seg])/(v[n_seg]^2+0.2^2)) -(0.28*v[n_seg])*(v[n_seg]/31.4-1)
+  $d[1]              = rpm - v[1]
+  $d[2:n_seg]        = v[1:n_seg-1] - v[2:n_seg]
+  drpm               = v[n_seg]
+End Equations
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Weight on Bit Model
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Constants
+  K1 = 0.7
+  tau1 = 10  ! is this time consistent with other time units?
+End Constants
+
+Parameters
+  wob_sp = 40000 , >= 10000 , <= 50000 !lbs
+End Parameters
+
+Variables 
+  wob = wob_sp , >= 10000 , <= 50000 !lbs
+End Variables
+
+Equations 
+  $wob = 1/tau1*(-wob + K1*wob_sp) !FOPDT model
+End Equations
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Pressure dynamics (Kaasa model)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Constants         
+  p_0=1  ! bar
+  q_back=0 !m^3/s
+  q_res=0  !m^3/s
+  Betha_a=14000 !bar
+  Betha_d=14000 !bar
+  Kc=0.07  !valve coefficient 0.004626
+  h=150    !m Distance between two successive sensors             
+  M_d=2700 !kg/m^4
+  M_a=800  !kg/m^4
+  Ad=0.073 !m^2
+  Aa=0.021 !m^2
+  Ac=0.02  !m^2
+  Mu=0.01  !mPa s
+  a=9.2
+  b=-0.7
+  c=3e-5     
+End Constants
+
+Parameters
+  Nu_d=0
+  f_d=10000 ! bar/(kg/m^3)^2
+  Ro_d=0.012 !kg/m^3
+  !f_a_1=1250
+  f_a_2=10000
+  f_a_3=10000
+  f_a_4=10000
+  f_a_5=10000
+  f_a_6=10000
+  f_a_7=10000
+  f_a_8=10000
+  f_a_9=10000
+  f_a_10=10000
+
+  Ro_a_1=0.014 !kg/m^3
+  Ro_a_2=0.005
+  Ro_a_3=0.005    
+  Ro_a_4=0.005
+  Ro_a_5=0.005
+  Ro_a_6=0.005
+  Ro_a_7=0.005
+  Ro_a_8=0.005
+  Ro_a_9=0.005
+  Ro_a_10=0.005
+
+  q_p = 0.024                    !m^3/s before 0.2 
+  Z_choke = 0.3 , < 1.0 , > 0.0  ! choke opening
+  n=1                            ! number of sensors along drill string
+  h_bit = 2000    !meter
+  !q_x = 0 !m^3/s
+  p_res=350 !bar
+End Parameters
+
+Variables
+  q_bit = 0.024 , > 0.005   !m^3/s
+  p_p = 55 !bar
+  p_c = 30  !bar
+
+  f_a_1 = 1250 ,  > 1 ! bar/(kg/m^3)^2
+    
+  p_a_1 != p_c + ((f_a_1)*Ro_a_1*(q_1)^2+Ro_a_1*g)*(h_bit*n_1+h*s_1)+ ((f_a_2)*Ro_a_2*(q_2)^2+Ro_a_2*g)*((h_bit-h)*n_2+h*s_2)+ ((f_a_3)*Ro_a_3*(q_3)^2+Ro_a_3*g)*((h_bit-2*h)*n_3+h*s_3)+((f_a_4)*Ro_a_4*(q_4)^2+Ro_a_4*g)*((h_bit-3*h)*n_4+h*s_4)+ ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9) + ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_2 != p_c + ((f_a_2)*Ro_a_2*(q_2)^2+Ro_a_2*g)*((h_bit-h)*n_2+h*s_2)+ ((f_a_3)*Ro_a_3*(q_3)^2+Ro_a_3*g)*((h_bit-2*h)*n_3+h*s_3)+ ((f_a_4)*Ro_a_4*(q_4)^2+Ro_a_4*g)*((h_bit-3*h)*n_4+h*s_4)+ ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_3 != p_c + ((f_a_3)*Ro_a_3*(q_3)^2+Ro_a_3*g)*((h_bit-2*h)*n_3+h*s_3)+ ((f_a_4)*Ro_a_4*(q_4)^2+Ro_a_4*g)*((h_bit-3*h)*n_4+h*s_4)+ ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_4 != p_c + ((f_a_4)*Ro_a_4*(q_4)^2+Ro_a_4*g)*((h_bit-3*h)*n_4+h*s_4)+ ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_5 != p_c + ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_6 != p_c + ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_7 != p_c + ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_8 != p_c + ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_9 != p_c + ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_10 = p_c + ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+
+  q_choke >= 0.01, = Kc*Z_choke*((Ro_a_1*n_1+Ro_a_2*n_2+Ro_a_3*n_3+Ro_a_4*n_4+Ro_a_5*n_5+Ro_a_6*n_6+Ro_a_7*n_7+Ro_a_8*n_8+Ro_a_9*n_9+Ro_a_10*n_10)*(p_c-p_0))^0.5 !flow rate through choke valve 
+ p_bit=p_a_1
+q_x = 0
+End Variables
+
+Intermediates
+  M=M_d+M_a
+  Va=Aa*h_bit !m^3
+  Vd=Ad*h_bit !m^3
+  p_d_f=(f_d)*q_p^2 !bar
+  q_1=q_bit !m^3/s
+  q_2=q_1
+  q_3=q_2
+  q_4=q_3
+  q_5=q_4
+  q_6=q_5
+  q_7=q_6
+  q_8=q_7
+  q_9=q_8
+  q_10=q_9
+      
+  n_1=(2-n)*(3-n)/2*(4-n)/3*(5-n)/4*(6-n)/5*(7-n)/6*(8-n)/7*(9-n)/8*(10-n)/9   ! equals 1 for n=1 0 for everything else
+  n_2=(n-1)*(3-n)/1*(4-n)/2*(5-n)/3*(6-n)/4*(7-n)/5*(8-n)/6*(9-n)/7*(10-n)/8   ! equals 1 for n=2 0 for everything else
+  n_3=(n-1)/2*(n-2)*(4-n)/1*(5-n)/2*(6-n)/3*(7-n)/4*(8-n)/5*(9-n)/6*(10-n)/7     ! equals 1 for n=3 0 for everything else
+  n_4=(n-1)/3*(n-2)/2*(n-3)/1*(5-n)/1*(6-n)/2*(7-n)/3*(8-n)/4*(9-n)/5*(10-n)/6   ! equals 1 for n=4 0 for everything else
+  n_5=(n-1)/4*(n-2)/3*(n-3)/2*(n-4)/1*(6-n)/1*(7-n)/2*(8-n)/3*(9-n)/4*(10-n)/5   ! equals 1 for n=5 0 for everything else
+  n_6=(n-1)/5*(n-2)/4*(n-3)/3*(n-4)/2*(n-5)/1*(7-n)/1*(8-n)/2*(9-n)/3*(10-n)/4   ! equals 1 for n=6 0 for everything else
+  n_7=(n-1)/6*(n-2)/5*(n-3)/4*(n-4)/3*(n-5)/2*(n-6)/1*(8-n)/1*(9-n)/2*(10-n)/3   ! equals 1 for n=7 0 for everything else
+  n_8=(n-1)/7*(n-2)/6*(n-3)/5*(n-4)/4*(n-5)/3*(n-6)/2*(n-7)/1*(9-n)/1*(10-n)/2   ! equals 1 for n=8 0 for everything else
+  n_9=(n-1)/8*(n-2)/7*(n-3)/6*(n-4)/5*(n-5)/4*(n-6)/3*(n-7)/2*(n-8)/1*(10-n)/1   ! equals 1 for n=9 0 for everything else
+  n_10=(n-1)/9*(n-2)/8*(n-3)/7*(n-4)/6*(n-5)/5*(n-6)/4*(n-7)/3*(n-8)/2*(n-9)/1   ! equals 1 for n=10 0 for everything else
+  
+  s_1=n_2+n_3+n_4+n_5+n_6+n_7+n_8+n_9+n_10           ! equals 0 for n=1 1 for every n more than 1
+  s_2=n_3+n_4+n_5+n_6+n_7+n_8+n_9+n_10               ! equals 0 for n=2 1 for every n more than 2
+  s_3=n_4+n_5+n_6+n_7+n_8+n_9+n_10                   ! equals 0 for n=3 1 for every n more than 3
+  s_4=n_5+n_6+n_7+n_8+n_9+n_10                       ! equals 0 for n=4 1 for every n more than 4
+  s_5=n_6+n_7+n_8+n_9+n_10                          ! equals 0 for n=5 1 for every n more than 5
+  s_6=n_7+n_8+n_9+n_10                               ! equals 0 for n=6 1 for every n more than 6
+  s_7=n_8+n_9+n_10                                   ! equals 0 for n=7 1 for every n more than 7
+  s_8=n_9+n_10                                      ! equals 0 for n=8 1 for every n more than 8
+  s_9=n_10                                           ! equals 0 for n=9 1 for every n more than 9
+  
+  D_i=(4*Ad/3.14)^0.5 !m
+  D_o=(4*Aa/3.14)^0.5+D_i !m
+  Vel_a=q_bit/Aa !m/s
+  
+  Na_a=757*Ro_a_1*Vel_a*(D_o-D_i)/Mu
+  Na_r=2.025*Ro_a_1*RPM*(D_o-D_i)*D_i/Mu
+
+  
+End Intermediates
+
+Equations
+  q_x = 0.004*(P_res-p_bit)/20
+  !f_a_1=(a*Na_a^b+c*Na_r)*8/(3.14^2*(D_o-D_i)^5*9.8)    
+  !f_a_1=(a*Na_a^b+c*Na_r)*33
+  f_a_1=(c*Na_r)*33*2e4
+  !f_a_1=1250
+  
+  q_choke = Kc*Z_choke*((Ro_a_1*n_1+Ro_a_2*n_2+Ro_a_3*n_3+Ro_a_4*n_4+Ro_a_5*n_5+Ro_a_6*n_6+Ro_a_7*n_7+Ro_a_8*n_8+Ro_a_9*n_9+Ro_a_10*n_10)*(p_c-p_0))^0.5 !flow rate through choke valve 
+  !q_choke^2 = (Kc*Z_choke*((Ro_a_1*n_1+Ro_a_2*n_2+Ro_a_3*n_3+Ro_a_4*n_4+Ro_a_5*n_5+Ro_a_6*n_6+Ro_a_7*n_7+Ro_a_8*n_8+Ro_a_9*n_9+Ro_a_10*n_10))^2*(p_c-p_0)) !flow rate through choke valve 
+
+  p_a_1 = p_c + ((f_a_1)*Ro_a_1*(q_1)^2+Ro_a_1*g)*(h_bit*n_1+h*s_1)+ ((f_a_2)*Ro_a_2*(q_2)^2+Ro_a_2*g)*((h_bit-h)*n_2+h*s_2)+ ((f_a_3)*Ro_a_3*(q_3)^2+Ro_a_3*g)*((h_bit-2*h)*n_3+h*s_3)+((f_a_4)*Ro_a_4*(q_4)^2+Ro_a_4*g)*((h_bit-3*h)*n_4+h*s_4)+ ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9) + ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)    
+  p_a_2 = p_c + ((f_a_2)*Ro_a_2*(q_2)^2+Ro_a_2*g)*((h_bit-h)*n_2+h*s_2)+ ((f_a_3)*Ro_a_3*(q_3)^2+Ro_a_3*g)*((h_bit-2*h)*n_3+h*s_3)+ ((f_a_4)*Ro_a_4*(q_4)^2+Ro_a_4*g)*((h_bit-3*h)*n_4+h*s_4)+ ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)    
+  p_a_3 = p_c + ((f_a_3)*Ro_a_3*(q_3)^2+Ro_a_3*g)*((h_bit-2*h)*n_3+h*s_3)+ ((f_a_4)*Ro_a_4*(q_4)^2+Ro_a_4*g)*((h_bit-3*h)*n_4+h*s_4)+ ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_4 = p_c + ((f_a_4)*Ro_a_4*(q_4)^2+Ro_a_4*g)*((h_bit-3*h)*n_4+h*s_4)+ ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_5 = p_c + ((f_a_5)*Ro_a_5*(q_5)^2+Ro_a_5*g)*((h_bit-4*h)*n_5+h*s_5)+ ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_6 = p_c + ((f_a_6)*Ro_a_6*(q_6)^2+Ro_a_6*g)*((h_bit-5*h)*n_6+h*s_6)+ ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_7 = p_c + ((f_a_7)*Ro_a_7*(q_7)^2+Ro_a_7*g)*((h_bit-6*h)*n_7+h*s_7)+ ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_8 = p_c + ((f_a_8)*Ro_a_8*(q_8)^2+Ro_a_8*g)*((h_bit-7*h)*n_8+h*s_8)+ ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_9 = p_c + ((f_a_9)*Ro_a_9*(q_9)^2+Ro_a_9*g)*((h_bit-8*h)*n_9+h*s_9)+ ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+  p_a_10 = p_c + ((f_a_10)*Ro_a_10*(q_10)^2+Ro_a_10*g)*((h_bit-9*h)*n_10)
+
+  !$h_bit=Nu_d
+  Va * $p_c   = Betha_a*(q_1*n_1+q_2*n_2+q_3*n_3+q_4*n_4+q_5*n_5+q_6*n_6+q_7*n_7+q_8*n_8+q_9*n_9+q_10*n_10-q_choke+0.01*q_x)  
+  M *  $q_bit = p_p - p_d_f + Ro_d*g*h_bit - p_a_1
+  Va * $p_p   = Betha_d*(q_p-q_bit)
+p_bit=p_a_1
+End Equations
